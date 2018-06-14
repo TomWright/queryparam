@@ -29,7 +29,7 @@ if err != nil {
 
 req := &GetUsersRequest{}
 
-err = queryparam.Unmarshall(u, req)
+err = queryparam.Unmarshal(u, req)
 if err != nil {
     panic(err)
 }
@@ -52,7 +52,7 @@ if err != nil {
 
 req := &GetUsersRequest{}
 
-err = queryparam.Unmarshall(u, req)
+err = queryparam.Unmarshal(u, req)
 if err != nil {
     panic(err)
 }
@@ -61,6 +61,7 @@ fmt.Println(req.Name) // { "Tom", "Jim" }
 ```
 
 If you want to change the delimiter you can do so by changing the value of `queryparam.Delimiter`.
+
 The default value is `,`.
 
 ### Parsing a URL from a HTTP Request
@@ -75,7 +76,7 @@ type GetUsersRequest struct {
 }
 
 req := &GetUsersRequest{}
-err = queryparam.Unmarshall(r.URL, req)
+err = queryparam.Unmarshal(r.URL, req)
 if err != nil {
     panic(err)
 }

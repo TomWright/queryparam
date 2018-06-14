@@ -17,18 +17,18 @@ var (
 	stringSliceType = reflect.TypeOf(make([]string, 0))
 
 	// ErrNonPointerTarget is returned when the given interface does not represent a pointer
-	ErrNonPointerTarget = errors.New("invalid unmarshall target. must be a pointer")
+	ErrNonPointerTarget = errors.New("invalid Unmarshal target. must be a pointer")
 	// ErrInvalidURL is returned when the given *url.URL is nil
 	ErrInvalidURL = errors.New("invalid url provided")
 	// ErrInvalidDelimiter is returned when trying to split a query param into a slice with an invalid separator
 	ErrInvalidDelimiter = errors.New("invalid query param separator")
-	// ErrNilSliceField is returned when Unmarshall is given a slice target that has not been initialised
+	// ErrNilSliceField is returned when Unmarshal is given a slice target that has not been initialised
 	ErrNilSliceField = errors.New("field target of slice cannot be nil")
 )
 
-// Unmarshall attempts to parse query parameters from the specified URL and store any found values
+// Unmarshal attempts to parse query parameters from the specified URL and store any found values
 // into the given interface
-func Unmarshall(u *url.URL, i interface{}) error {
+func Unmarshal(u *url.URL, i interface{}) error {
 	if u == nil {
 		return ErrInvalidURL
 	}

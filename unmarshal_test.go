@@ -29,7 +29,7 @@ type TestRequestFour struct {
 	Name []string `queryparam:"name"`
 }
 
-func TestUnmarshall_IntoString(t *testing.T) {
+func TestUnmarshal_IntoString(t *testing.T) {
 	a := assert.New(t)
 
 	u, err := url.Parse("https://example.com/some/path?name=Tom&age=23")
@@ -37,7 +37,7 @@ func TestUnmarshall_IntoString(t *testing.T) {
 
 	req := &TestRequestOne{}
 
-	err = queryparam.Unmarshall(u, req)
+	err = queryparam.Unmarshal(u, req)
 	a.NoError(err)
 
 	a.EqualValues("Tom", req.Name)
@@ -45,7 +45,7 @@ func TestUnmarshall_IntoString(t *testing.T) {
 	a.EqualValues("", req.Gender)
 }
 
-func TestUnmarshall_IntoSlice(t *testing.T) {
+func TestUnmarshal_IntoSlice(t *testing.T) {
 	a := assert.New(t)
 
 	u, err := url.Parse("https://example.com/some/path?name=Tom,Jim")
@@ -54,7 +54,7 @@ func TestUnmarshall_IntoSlice(t *testing.T) {
 	req := &TestRequestFour{}
 	req.Name = make([]string, 0)
 
-	err = queryparam.Unmarshall(u, req)
+	err = queryparam.Unmarshal(u, req)
 	a.NoError(err)
 
 	a.Len(req.Name, 2)
@@ -62,7 +62,7 @@ func TestUnmarshall_IntoSlice(t *testing.T) {
 	a.Equal("Jim", req.Name[1])
 }
 
-func TestUnmarshall_IntoSlice_CustomDelimiter(t *testing.T) {
+func TestUnmarshal_IntoSlice_CustomDelimiter(t *testing.T) {
 	defer func() {
 		queryparam.Delimiter = ","
 	}()
@@ -77,7 +77,7 @@ func TestUnmarshall_IntoSlice_CustomDelimiter(t *testing.T) {
 
 	queryparam.Delimiter = "-"
 
-	err = queryparam.Unmarshall(u, req)
+	err = queryparam.Unmarshal(u, req)
 	a.NoError(err)
 
 	a.Len(req.Name, 2)
@@ -85,7 +85,7 @@ func TestUnmarshall_IntoSlice_CustomDelimiter(t *testing.T) {
 	a.Equal("Jim", req.Name[1])
 }
 
-func TestUnmarshall_IntoSlice_InvalidDelimiter(t *testing.T) {
+func TestUnmarshal_IntoSlice_InvalidDelimiter(t *testing.T) {
 	defer func() {
 		queryparam.Delimiter = ","
 	}()
@@ -100,11 +100,11 @@ func TestUnmarshall_IntoSlice_InvalidDelimiter(t *testing.T) {
 
 	queryparam.Delimiter = ""
 
-	err = queryparam.Unmarshall(u, req)
+	err = queryparam.Unmarshal(u, req)
 	a.Equal(queryparam.ErrInvalidDelimiter, err)
 }
 
-func TestUnmarshall_IntoSlice_NilSlice(t *testing.T) {
+func TestUnmarshal_IntoSlice_NilSlice(t *testing.T) {
 	a := assert.New(t)
 
 	u, err := url.Parse("https://example.com/some/path?name=Tom,Jim")
@@ -112,11 +112,11 @@ func TestUnmarshall_IntoSlice_NilSlice(t *testing.T) {
 
 	req := &TestRequestFour{}
 
-	err = queryparam.Unmarshall(u, req)
+	err = queryparam.Unmarshal(u, req)
 	a.Equal(queryparam.ErrNilSliceField, err)
 }
 
-func TestUnmarshall_UnusedInvalidField(t *testing.T) {
+func TestUnmarshal_UnusedInvalidField(t *testing.T) {
 	a := assert.New(t)
 
 	u, err := url.Parse("https://example.com/some/path?name=Tom&age=23&gender=male")
@@ -124,7 +124,7 @@ func TestUnmarshall_UnusedInvalidField(t *testing.T) {
 
 	req := &TestRequestThree{}
 
-	err = queryparam.Unmarshall(u, req)
+	err = queryparam.Unmarshal(u, req)
 	a.NoError(err)
 
 	a.EqualValues("Tom", req.Name)
@@ -132,16 +132,16 @@ func TestUnmarshall_UnusedInvalidField(t *testing.T) {
 	a.EqualValues("male", req.Gender)
 }
 
-func TestUnmarshall_InvalidURL(t *testing.T) {
+func TestUnmarshal_InvalidURL(t *testing.T) {
 	a := assert.New(t)
 
 	req := &TestRequestOne{}
 
-	err := queryparam.Unmarshall(nil, req)
+	err := queryparam.Unmarshal(nil, req)
 	a.Equal(err, queryparam.ErrInvalidURL)
 }
 
-func TestUnmarshall_NonPointerTarget(t *testing.T) {
+func TestUnmarshal_NonPointerTarget(t *testing.T) {
 	a := assert.New(t)
 
 	u, err := url.Parse("https://example.com/some/path?name=Tom&age=23")
@@ -149,11 +149,11 @@ func TestUnmarshall_NonPointerTarget(t *testing.T) {
 
 	req := TestRequestOne{}
 
-	err = queryparam.Unmarshall(u, req)
+	err = queryparam.Unmarshal(u, req)
 	a.Equal(err, queryparam.ErrNonPointerTarget)
 }
 
-func TestUnmarshall_InvalidFieldType(t *testing.T) {
+func TestUnmarshal_InvalidFieldType(t *testing.T) {
 	a := assert.New(t)
 
 	u, err := url.Parse("https://example.com/some/path?name=Tom&age=23")
@@ -161,6 +161,6 @@ func TestUnmarshall_InvalidFieldType(t *testing.T) {
 
 	req := &TestRequestTwo{}
 
-	err = queryparam.Unmarshall(u, req)
+	err = queryparam.Unmarshal(u, req)
 	a.EqualError(err, "invalid field type. `Age` must be `string` or `[]string`")
 }
