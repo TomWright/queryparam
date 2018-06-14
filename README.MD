@@ -39,6 +39,29 @@ fmt.Println(req.Age) // "23"
 fmt.Println(req.Gender) // ""
 ```
 
+### Parsing a URL with delimited parameters
+```
+type GetUsersRequest struct {
+	Name   []string `queryparam:"name"`
+}
+
+u, err := url.Parse("https://example.com/users?name=Tom,Jim")
+if err != nil {
+    panic(err)
+}
+
+req := &GetUsersRequest{}
+
+err = queryparam.Unmarshall(u, req)
+if err != nil {
+    panic(err)
+}
+
+fmt.Println(req.Name) // { "Tom", "Jim" }
+```
+
+If you want to change the delimiter you can do so by changing the value of `queryparam.Delimiter`. The default value is `,`.
+
 ### Parsing a URL from a HTTP Request
 ```
 var r *http.Request

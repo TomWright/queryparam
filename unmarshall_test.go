@@ -25,7 +25,11 @@ type TestRequestThree struct {
 	Gender string `queryparam:"gender"`
 }
 
-func TestUnmarshall(t *testing.T) {
+type TestRequestFour struct {
+	Name []string `queryparam:"name"`
+}
+
+func TestUnmarshall_IntoString(t *testing.T) {
 	a := assert.New(t)
 
 	u, err := url.Parse("https://example.com/some/path?name=Tom&age=23")
@@ -39,6 +43,77 @@ func TestUnmarshall(t *testing.T) {
 	a.EqualValues("Tom", req.Name)
 	a.EqualValues("23", req.Age)
 	a.EqualValues("", req.Gender)
+}
+
+func TestUnmarshall_IntoSlice(t *testing.T) {
+	a := assert.New(t)
+
+	u, err := url.Parse("https://example.com/some/path?name=Tom,Jim")
+	a.NoError(err)
+
+	req := &TestRequestFour{}
+	req.Name = make([]string, 0)
+
+	err = queryparam.Unmarshall(u, req)
+	a.NoError(err)
+
+	a.Len(req.Name, 2)
+	a.Equal("Tom", req.Name[0])
+	a.Equal("Jim", req.Name[1])
+}
+
+func TestUnmarshall_IntoSlice_CustomDelimiter(t *testing.T) {
+	defer func() {
+		queryparam.Delimiter = ","
+	}()
+
+	a := assert.New(t)
+
+	u, err := url.Parse("https://example.com/some/path?name=Tom-Jim")
+	a.NoError(err)
+
+	req := &TestRequestFour{}
+	req.Name = make([]string, 0)
+
+	queryparam.Delimiter = "-"
+
+	err = queryparam.Unmarshall(u, req)
+	a.NoError(err)
+
+	a.Len(req.Name, 2)
+	a.Equal("Tom", req.Name[0])
+	a.Equal("Jim", req.Name[1])
+}
+
+func TestUnmarshall_IntoSlice_InvalidDelimiter(t *testing.T) {
+	defer func() {
+		queryparam.Delimiter = ","
+	}()
+
+	a := assert.New(t)
+
+	u, err := url.Parse("https://example.com/some/path?name=Tom-Jim")
+	a.NoError(err)
+
+	req := &TestRequestFour{}
+	req.Name = make([]string, 0)
+
+	queryparam.Delimiter = ""
+
+	err = queryparam.Unmarshall(u, req)
+	a.Equal(queryparam.ErrInvalidDelimiter, err)
+}
+
+func TestUnmarshall_IntoSlice_NilSlice(t *testing.T) {
+	a := assert.New(t)
+
+	u, err := url.Parse("https://example.com/some/path?name=Tom,Jim")
+	a.NoError(err)
+
+	req := &TestRequestFour{}
+
+	err = queryparam.Unmarshall(u, req)
+	a.Equal(queryparam.ErrNilSliceField, err)
 }
 
 func TestUnmarshall_UnusedInvalidField(t *testing.T) {
@@ -87,5 +162,5 @@ func TestUnmarshall_InvalidFieldType(t *testing.T) {
 	req := &TestRequestTwo{}
 
 	err = queryparam.Unmarshall(u, req)
-	a.EqualError(err, "invalid field type. `Age` must be a string")
+	a.EqualError(err, "invalid field type. `Age` must be `string` or `[]string`")
 }
