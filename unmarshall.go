@@ -8,12 +8,17 @@ import (
 )
 
 var (
-	tag                 = "queryparam"
-	stringType          = reflect.TypeOf("")
+	tag        = "queryparam"
+	stringType = reflect.TypeOf("")
+
+	// ErrNonPointerTarget is returned when the given interface does not represent a pointer
 	ErrNonPointerTarget = errors.New("invalid unmarshall target. must be a pointer")
-	ErrInvalidURL       = errors.New("invalid url provided")
+	// ErrInvalidURL is returned when the given *url.URL is nil
+	ErrInvalidURL = errors.New("invalid url provided")
 )
 
+// Unmarshall attempts to parse query parameters from the specified URL and store any found values
+// into the given interface
 func Unmarshall(u *url.URL, i interface{}) error {
 	if u == nil {
 		return ErrInvalidURL
