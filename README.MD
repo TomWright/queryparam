@@ -60,7 +60,8 @@ if err != nil {
 fmt.Println(req.Name) // { "Tom", "Jim" }
 ```
 
-If you want to change the delimiter you can do so by changing the value of `queryparam.Delimiter`. The default value is `,`.
+If you want to change the delimiter you can do so by changing the value of `queryparam.Delimiter`.
+The default value is `,`.
 
 ### Parsing a URL from a HTTP Request
 ```
