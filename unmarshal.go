@@ -22,8 +22,6 @@ var (
 	ErrInvalidURL = errors.New("invalid url provided")
 	// ErrInvalidDelimiter is returned when trying to split a query param into a slice with an invalid separator
 	ErrInvalidDelimiter = errors.New("invalid query param separator")
-	// ErrNilSliceField is returned when Unmarshal is given a slice target that has not been initialised
-	ErrNilSliceField = errors.New("field target of slice cannot be nil")
 )
 
 // Unmarshal attempts to parse query parameters from the specified URL and store any found values
@@ -59,9 +57,6 @@ func Unmarshal(u *url.URL, i interface{}) error {
 					return ErrInvalidDelimiter
 				}
 				vField = v.Field(i)
-				if vField.IsNil() {
-					return ErrNilSliceField
-				}
 				vField.Set(reflect.AppendSlice(vField, reflect.ValueOf(strings.Split(paramVal, Delimiter))))
 			default:
 				return fmt.Errorf("invalid field type. `%s` must be `string` or `[]string`", field.Name)

@@ -113,7 +113,9 @@ func TestUnmarshal_IntoSlice_NilSlice(t *testing.T) {
 	req := &TestRequestFour{}
 
 	err = queryparam.Unmarshal(u, req)
-	a.Equal(queryparam.ErrNilSliceField, err)
+	a.NoError(err)
+	a.Nil(req.Name)
+	//a.Equal(queryparam.ErrNilSliceField, err)
 }
 
 func TestUnmarshal_UnusedInvalidField(t *testing.T) {
