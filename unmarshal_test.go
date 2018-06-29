@@ -112,10 +112,32 @@ func TestUnmarshal_IntoSlice_NilSlice(t *testing.T) {
 
 	req := &TestRequestFour{}
 
+	a.Nil(req.Name)
+
 	err = queryparam.Unmarshal(u, req)
 	a.NoError(err)
+	a.EqualValues([]string{"Tom", "Jim"}, req.Name)
+}
+
+func TestUnmarshal_IntoSlice_NoParams(t *testing.T) {
+	a := assert.New(t)
+
+	u1, err := url.Parse("https://example.com/some/path")
+	a.NoError(err)
+	u2, err := url.Parse("https://example.com/some/path?name=")
+	a.NoError(err)
+
+	req := &TestRequestFour{}
+
 	a.Nil(req.Name)
-	//a.Equal(queryparam.ErrNilSliceField, err)
+
+	err = queryparam.Unmarshal(u1, req)
+	a.NoError(err)
+	a.Len(req.Name, 0)
+
+	err = queryparam.Unmarshal(u2, req)
+	a.NoError(err)
+	a.Len(req.Name, 0)
 }
 
 func TestUnmarshal_UnusedInvalidField(t *testing.T) {

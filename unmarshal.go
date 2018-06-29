@@ -56,6 +56,9 @@ func Unmarshal(u *url.URL, i interface{}) error {
 				if len(Delimiter) == 0 {
 					return ErrInvalidDelimiter
 				}
+				if len(paramVal) == 0 {
+					continue
+				}
 				vField = v.Field(i)
 				vField.Set(reflect.AppendSlice(vField, reflect.ValueOf(strings.Split(paramVal, Delimiter))))
 			default:
