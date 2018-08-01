@@ -8,11 +8,13 @@ import (
 	"strings"
 )
 
-var (
-	// Delimiter specifies the string that will be used to split query parameters when the target is a slice
-	Delimiter = ","
+const (
+	tag              = "queryparam"
+	delimiterTag     = "queryparamdelim"
+	defaultDelimiter = ","
+)
 
-	tag             = "queryparam"
+var (
 	stringType      = reflect.TypeOf("")
 	stringSliceType = reflect.TypeOf(make([]string, 0))
 
@@ -53,14 +55,18 @@ func Unmarshal(u *url.URL, i interface{}) error {
 			case stringType:
 				v.Field(i).SetString(paramVal)
 			case stringSliceType:
-				if len(Delimiter) == 0 {
+				delimiter := defaultDelimiter
+				if customDelimiter := field.Tag.Get(delimiterTag); customDelimiter != "" {
+					delimiter = customDelimiter
+				}
+				if len(delimiter) == 0 {
 					return ErrInvalidDelimiter
 				}
 				if len(paramVal) == 0 {
 					continue
 				}
 				vField = v.Field(i)
-				vField.Set(reflect.AppendSlice(vField, reflect.ValueOf(strings.Split(paramVal, Delimiter))))
+				vField.Set(reflect.AppendSlice(vField, reflect.ValueOf(strings.Split(paramVal, delimiter))))
 			default:
 				return fmt.Errorf("invalid field type. `%s` must be `string` or `[]string`", field.Name)
 			}
