@@ -4,9 +4,9 @@ import (
 	"testing"
 	"github.com/tomwright/queryparam"
 	"net/url"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"fmt"
+	"reflect"
 )
 
 // ExampleUnmarshal creates a dummy http request and unmarshals the data into a struct
@@ -33,136 +33,105 @@ func ExampleUnmarshal() {
 	// Output: Tom is 23
 }
 
-func TestUnmarshal_IntoString(t *testing.T) {
-	t.Parallel()
-
-	a := assert.New(t)
-
-	u, err := url.Parse("https://example.com/some/path?name=Tom&age=23")
-	a.NoError(err)
-
-	req := &struct {
-		Name   string `queryparam:"name"`
-		Age    string `queryparam:"age"`
-		Gender string `queryparam:"gender"`
-	}{}
-
-	err = queryparam.Unmarshal(u, req)
-	a.NoError(err)
-
-	a.EqualValues("Tom", req.Name)
-	a.EqualValues("23", req.Age)
-	a.EqualValues("", req.Gender)
+type testData struct {
+	Name         string   `queryparam:"name"`
+	NameList     []string `queryparam:"names"`
+	NameListDash []string `queryparam:"names" queryparamdelim:"-"`
+	Age          string   `queryparam:"age"`
 }
 
-func TestUnmarshal_IntoSlice(t *testing.T) {
+func TestUnmarshal(t *testing.T) {
 	t.Parallel()
 
-	a := assert.New(t)
+	tests := []struct {
+		TestDesc   string
+		URL        string
+		Data       testData
+		OutputData testData
+	}{
+		{
+			TestDesc: "SingleStrings",
+			URL:      "https://example.com/some/path?name=Tom&age=23",
+			Data:     testData{},
+			OutputData: testData{
+				Name: "Tom",
+				Age:  "23",
+			},
+		},
+		{
+			TestDesc: "CommaDelimitedStrings",
+			URL:      "https://example.com/some/path?name=Tom&names=x,y,z&age=23",
+			Data:     testData{},
+			OutputData: testData{
+				Name:         "Tom",
+				NameList:     []string{"x", "y", "z"},
+				NameListDash: []string{"x,y,z"},
+				Age:          "23",
+			},
+		},
+		{
+			TestDesc: "CommaAndDashDelimitedStrings",
+			URL:      "https://example.com/some/path?names=x,y-z&age=2-3",
+			Data:     testData{},
+			OutputData: testData{
+				NameList:     []string{"x", "y-z"},
+				NameListDash: []string{"x,y", "z"},
+				Age:          "2-3",
+			},
+		},
+	}
+
+	for _, testCase := range tests {
+		tc := testCase
+		t.Run(tc.TestDesc, func(st *testing.T) {
+			st.Parallel()
+
+			u, err := url.Parse(tc.URL)
+			if err != nil {
+				st.Errorf("unable to parse url: %s", err)
+			}
+
+			err = queryparam.Unmarshal(u, &tc.Data)
+			if err != nil {
+				st.Errorf("unable to unmarshal url: %s", err)
+			}
+
+			if ! reflect.DeepEqual(tc.Data, tc.OutputData) {
+				st.Errorf("expected `%v`, got `%v`", tc.OutputData, tc.Data)
+			}
+		})
+	}
+}
+
+func TestUnmarshal_BlankDelimiterUsesDefaultDelimiter(t *testing.T) {
+	t.Parallel()
 
 	u, err := url.Parse("https://example.com/some/path?name=Tom,Jim")
-	a.NoError(err)
-
-	req := &struct {
-		Name []string `queryparam:"name"`
-	}{}
-
-	err = queryparam.Unmarshal(u, req)
-	a.NoError(err)
-
-	a.Len(req.Name, 2)
-	a.Equal("Tom", req.Name[0])
-	a.Equal("Jim", req.Name[1])
-}
-
-func TestUnmarshal_IntoSlice_CustomDelimiter(t *testing.T) {
-	t.Parallel()
-
-	a := assert.New(t)
-
-	u, err := url.Parse("https://example.com/some/path?name=Tom-Jim")
-	a.NoError(err)
-
-	req := &struct {
-		Name []string `queryparam:"name" queryparamdelim:"-"`
-	}{}
-
-	err = queryparam.Unmarshal(u, req)
-	a.NoError(err)
-
-	a.Len(req.Name, 2)
-	a.Equal("Tom", req.Name[0])
-	a.Equal("Jim", req.Name[1])
-}
-
-func TestUnmarshal_IntoSlice_BlankDelimiterUsesDefaultDelimiter(t *testing.T) {
-	t.Parallel()
-
-	a := assert.New(t)
-
-	u, err := url.Parse("https://example.com/some/path?name=Tom,Jim")
-	a.NoError(err)
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
 
 	req := &struct {
 		Name []string `queryparam:"name" queryparamdelim:""`
 	}{}
 
 	err = queryparam.Unmarshal(u, req)
-	a.NoError(err)
-	a.EqualValues([]string{"Tom", "Jim"}, req.Name)
-}
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
 
-func TestUnmarshal_IntoSlice_NilSlice(t *testing.T) {
-	t.Parallel()
-
-	a := assert.New(t)
-
-	u, err := url.Parse("https://example.com/some/path?name=Tom,Jim")
-	a.NoError(err)
-
-	req := &struct {
-		Name []string `queryparam:"name"`
-	}{}
-
-	a.Nil(req.Name)
-
-	err = queryparam.Unmarshal(u, req)
-	a.NoError(err)
-	a.EqualValues([]string{"Tom", "Jim"}, req.Name)
-}
-
-func TestUnmarshal_IntoSlice_NoParams(t *testing.T) {
-	t.Parallel()
-
-	a := assert.New(t)
-
-	u1, err := url.Parse("https://example.com/some/path")
-	a.NoError(err)
-	u2, err := url.Parse("https://example.com/some/path?name=")
-	a.NoError(err)
-
-	req := &struct {
-		Name []string `queryparam:"name"`
-	}{}
-
-	a.Nil(req.Name)
-
-	err = queryparam.Unmarshal(u1, req)
-	a.NoError(err)
-	a.Len(req.Name, 0)
-
-	err = queryparam.Unmarshal(u2, req)
-	a.NoError(err)
-	a.Len(req.Name, 0)
+	if exp, got := []string{"Tom", "Jim"}, req.Name; ! reflect.DeepEqual(exp, got) {
+		t.Errorf("unexpected result. expected `%v`, got `%v`", exp, got)
+	}
 }
 
 func TestUnmarshal_UnusedInvalidField(t *testing.T) {
 	t.Parallel()
 
-	a := assert.New(t)
-
 	u, err := url.Parse("https://example.com/some/path?name=Tom&age=23&gender=male")
-	a.NoError(err)
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
 
 	req := &struct {
 		Name   string `queryparam:"name"`
@@ -171,17 +140,23 @@ func TestUnmarshal_UnusedInvalidField(t *testing.T) {
 	}{}
 
 	err = queryparam.Unmarshal(u, req)
-	a.NoError(err)
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
 
-	a.EqualValues("Tom", req.Name)
-	a.EqualValues(0, req.Age)
-	a.EqualValues("male", req.Gender)
+	if exp, got := "Tom", req.Name; exp != got {
+		t.Errorf("unexpected name. expected `%v`, got `%v`", exp, got)
+	}
+	if exp, got := 0, req.Age; exp != got {
+		t.Errorf("unexpected age. expected `%v`, got `%v`", exp, got)
+	}
+	if exp, got := "male", req.Gender; exp != got {
+		t.Errorf("unexpected gender. expected `%v`, got `%v`", exp, got)
+	}
 }
 
 func TestUnmarshal_InvalidURL(t *testing.T) {
 	t.Parallel()
-
-	a := assert.New(t)
 
 	req := &struct {
 		Name   string `queryparam:"name"`
@@ -190,16 +165,18 @@ func TestUnmarshal_InvalidURL(t *testing.T) {
 	}{}
 
 	err := queryparam.Unmarshal(nil, req)
-	a.Equal(err, queryparam.ErrInvalidURL)
+	if exp, got := queryparam.ErrInvalidURL, err; exp != got {
+		t.Errorf("unexpected error. expected `%v`, got `%v`", exp, got)
+	}
 }
 
 func TestUnmarshal_NonPointerTarget(t *testing.T) {
 	t.Parallel()
 
-	a := assert.New(t)
-
 	u, err := url.Parse("https://example.com/some/path?name=Tom&age=23")
-	a.NoError(err)
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
 
 	req := struct {
 		Name   string `queryparam:"name"`
@@ -208,16 +185,18 @@ func TestUnmarshal_NonPointerTarget(t *testing.T) {
 	}{}
 
 	err = queryparam.Unmarshal(u, req)
-	a.Equal(err, queryparam.ErrNonPointerTarget)
+	if exp, got := queryparam.ErrNonPointerTarget, err; exp != got {
+		t.Errorf("unexpected error. expected `%v`, got `%v`", exp, got)
+	}
 }
 
 func TestUnmarshal_InvalidFieldType(t *testing.T) {
 	t.Parallel()
 
-	a := assert.New(t)
-
 	u, err := url.Parse("https://example.com/some/path?name=Tom&age=23")
-	a.NoError(err)
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
 
 	req := &struct {
 		Name   string `queryparam:"name"`
@@ -226,5 +205,7 @@ func TestUnmarshal_InvalidFieldType(t *testing.T) {
 	}{}
 
 	err = queryparam.Unmarshal(u, req)
-	a.EqualError(err, "invalid field type. `Age` must be `string` or `[]string`")
+	if exp, got := "invalid field type. `Age` must be `string` or `[]string`", err.Error(); exp != got {
+		t.Errorf("unexpected error string. expected `%s`, got `%s`", exp, got)
+	}
 }

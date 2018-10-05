@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/TomWright/queryparam.svg?branch=master)](https://travis-ci.org/TomWright/queryparam)
 [![codecov](https://codecov.io/gh/TomWright/queryparam/branch/master/graph/badge.svg)](https://codecov.io/gh/TomWright/queryparam)
+[![Go Report Card](https://goreportcard.com/badge/github.com/TomWright/queryparam)](https://goreportcard.com/report/github.com/TomWright/queryparam)
 [![Documentation](https://godoc.org/github.com/TomWright/queryparam?status.svg)](https://godoc.org/github.com/TomWright/queryparam)
 
 Query param makes it easy to access the query parameters stored in a URL.
