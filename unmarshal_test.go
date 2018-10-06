@@ -1,12 +1,13 @@
 package queryparam_test
 
 import (
-	"testing"
-	"github.com/tomwright/queryparam"
-	"net/url"
-	"net/http"
 	"fmt"
+	"net/http"
+	"net/url"
 	"reflect"
+	"testing"
+
+	"github.com/tomwright/queryparam"
 )
 
 // ExampleUnmarshal creates a dummy http request and unmarshals the data into a struct
@@ -96,7 +97,7 @@ func TestUnmarshal(t *testing.T) {
 				st.Errorf("unable to unmarshal url: %s", err)
 			}
 
-			if ! reflect.DeepEqual(tc.Data, tc.OutputData) {
+			if !reflect.DeepEqual(tc.Data, tc.OutputData) {
 				st.Errorf("expected `%v`, got `%v`", tc.OutputData, tc.Data)
 			}
 		})
@@ -120,7 +121,7 @@ func TestUnmarshal_BlankDelimiterUsesDefaultDelimiter(t *testing.T) {
 		t.Errorf("unexpected error: %s", err)
 	}
 
-	if exp, got := []string{"Tom", "Jim"}, req.Name; ! reflect.DeepEqual(exp, got) {
+	if exp, got := []string{"Tom", "Jim"}, req.Name; !reflect.DeepEqual(exp, got) {
 		t.Errorf("unexpected result. expected `%v`, got `%v`", exp, got)
 	}
 }
@@ -208,4 +209,23 @@ func TestUnmarshal_InvalidFieldType(t *testing.T) {
 	if exp, got := "invalid field type. `Age` must be `string` or `[]string`", err.Error(); exp != got {
 		t.Errorf("unexpected error string. expected `%s`, got `%s`", exp, got)
 	}
+}
+
+func BenchmarkUnmarshal(b *testing.B) {
+
+	u, err := url.Parse("http://localhost:123?name=abcd&namelist=a,b,c&namelistdash=abc&age=12")
+	if err != nil {
+		b.FailNow()
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		data := testData{}
+		err = queryparam.Unmarshal(u, &data)
+		if err != nil {
+			b.FailNow()
+		}
+	}
+	b.StopTimer()
+	b.ReportAllocs()
 }
