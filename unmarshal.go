@@ -1,10 +1,10 @@
 package queryparam
 
 import (
-	"reflect"
 	"errors"
-	"net/url"
 	"fmt"
+	"net/url"
+	"reflect"
 	"strings"
 )
 
@@ -28,7 +28,7 @@ func delimiterFromField(field reflect.StructField) string {
 	return defaultDelimiter
 }
 
-func unmarshalField(v reflect.Value, t reflect.Type, i int, u *url.URL) error {
+func unmarshalField(v reflect.Value, t reflect.Type, i int, qs url.Values) error {
 	var (
 		field    reflect.StructField
 		paramVal string
@@ -42,7 +42,7 @@ func unmarshalField(v reflect.Value, t reflect.Type, i int, u *url.URL) error {
 		return nil
 	}
 
-	paramVal = u.Query().Get(tagVal)
+	paramVal = qs.Get(tagVal)
 	if len(paramVal) == 0 {
 		return nil
 	}
@@ -75,8 +75,9 @@ func Unmarshal(u *url.URL, i interface{}) error {
 	v := iVal.Elem()
 	t := v.Type()
 
+	qs := u.Query()
 	for i := 0; i < t.NumField(); i++ {
-		if err := unmarshalField(v, t, i, u); err != nil {
+		if err := unmarshalField(v, t, i, qs); err != nil {
 			return err
 		}
 	}
