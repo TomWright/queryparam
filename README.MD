@@ -10,7 +10,7 @@ Query param makes it easy to access the query parameters stored in a URL.
 ## Installation
 
 ```
-go get -u github.com/tomwright/queryparam
+go get -u github.com/tomwright/queryparam/v3
 ```
 
 ## Examples
@@ -30,7 +30,7 @@ if err != nil {
 
 req := &GetUsersRequest{}
 
-err = queryparam.Unmarshal(u, req)
+err = queryparam.Parse(u, req)
 if err != nil {
     panic(err)
 }
@@ -53,7 +53,7 @@ if err != nil {
 
 req := &GetUsersRequest{}
 
-err = queryparam.Unmarshal(u, req)
+err = queryparam.Parse(u, req)
 if err != nil {
     panic(err)
 }
@@ -77,7 +77,7 @@ type GetUsersRequest struct {
 }
 
 req := &GetUsersRequest{}
-err = queryparam.Unmarshal(r.URL, req)
+err = queryparam.Parse(r.URL, req)
 if err != nil {
     panic(err)
 }
