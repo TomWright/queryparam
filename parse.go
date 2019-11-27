@@ -5,30 +5,32 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"time"
 )
 
 var (
 	// ErrNonPointerTarget is returned when the given interface does not represent a pointer
 	ErrNonPointerTarget = errors.New("invalid target. must be a non nil pointer")
-	// ErrInvalidURL is returned when the given *url.URL is nil
-	ErrInvalidURL = errors.New("invalid url provided")
+	// ErrInvalidURLValues is returned when the given *url.URL is nil
+	ErrInvalidURLValues = errors.New("invalid url provided")
 	// ErrUnhandledFieldType is returned when a struct property is tagged but has an unhandled type.
-	ErrUnhandledFieldType = errors.New("invalid url provided")
+	ErrUnhandledFieldType = errors.New("unhandled field type")
 	// ErrInvalidTag is returned when the tag value is invalid
 	ErrInvalidTag = errors.New("invalid tag")
 )
 
 // DefaultParser is a default parser.
 var DefaultParser = &Parser{
-	Tag: "queryparam",
+	Tag:          "queryparam",
 	DelimiterTag: "queryparamdelim",
-	Delimiter: ",",
+	Delimiter:    ",",
 	ValueParsers: map[reflect.Type]ValueParser{
-		reflect.TypeOf(""): StringValueParser,
-		reflect.TypeOf([]string{}): StringSliceValueParser,
-		reflect.TypeOf(0): IntValueParser,
-		reflect.TypeOf(int32(0)): IntValueParser,
-		reflect.TypeOf(int64(0)): IntValueParser,
+		reflect.TypeOf(""):          StringValueParser,
+		reflect.TypeOf([]string{}):  StringSliceValueParser,
+		reflect.TypeOf(0):           IntValueParser,
+		reflect.TypeOf(int32(0)):    IntValueParser,
+		reflect.TypeOf(int64(0)):    IntValueParser,
+		reflect.TypeOf(time.Time{}): TimeValueParser,
 	},
 }
 
@@ -53,11 +55,10 @@ func (p *Parser) FieldDelimiter(field reflect.StructField) string {
 
 // Parse attempts to parse query parameters from the specified URL and store any found values
 // into the given target interface.
-func (p *Parser) Parse(u *url.URL, target interface{}) error {
-	if u == nil {
-		return ErrInvalidURL
+func (p *Parser) Parse(urlValues url.Values, target interface{}) error {
+	if urlValues == nil {
+		return ErrInvalidURLValues
 	}
-
 	targetValue := reflect.ValueOf(target)
 	if targetValue.Kind() != reflect.Ptr || targetValue.IsNil() {
 		return ErrNonPointerTarget
@@ -66,7 +67,6 @@ func (p *Parser) Parse(u *url.URL, target interface{}) error {
 	targetElement := targetValue.Elem()
 	targetType := targetElement.Type()
 
-	urlValues := u.Query()
 	for i := 0; i < targetType.NumField(); i++ {
 		if err := p.ParseField(targetType.Field(i), targetElement.Field(i), urlValues); err != nil {
 			return err
@@ -103,6 +103,6 @@ func (p *Parser) ParseField(field reflect.StructField, value reflect.Value, urlV
 
 // Parse attempts to parse query parameters from the specified URL and store any found values
 // into the given target interface.
-func Parse(u *url.URL, target interface{}) error {
-	return DefaultParser.Parse(u, target)
+func Parse(urlValues url.Values, target interface{}) error {
+	return DefaultParser.Parse(urlValues, target)
 }
