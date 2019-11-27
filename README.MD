@@ -10,7 +10,7 @@ Query param makes it easy to access the query parameters stored in a URL.
 ## Installation
 
 ```
-go get -u github.com/tomwright/queryparam/v3
+go get -u github.com/tomwright/queryparam
 ```
 
 ## Examples
