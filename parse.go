@@ -26,6 +26,9 @@ var DefaultParser = &Parser{
 	ValueParsers: map[reflect.Type]ValueParser{
 		reflect.TypeOf(""): StringValueParser,
 		reflect.TypeOf([]string{}): StringSliceValueParser,
+		reflect.TypeOf(0): IntValueParser,
+		reflect.TypeOf(int32(0)): IntValueParser,
+		reflect.TypeOf(int64(0)): IntValueParser,
 	},
 }
 

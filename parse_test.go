@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/tomwright/queryparam/v3"
@@ -39,7 +40,7 @@ type testData struct {
 	Name         string   `queryparam:"name"`
 	NameList     []string `queryparam:"names"`
 	NameListDash []string `queryparam:"names" queryparamdelim:"-"`
-	Age          string   `queryparam:"age"`
+	Age          int   `queryparam:"age"`
 }
 
 func TestParser_Success(t *testing.T) {
@@ -57,7 +58,7 @@ func TestParser_Success(t *testing.T) {
 			Data:     testData{},
 			OutputData: testData{
 				Name: "Tom",
-				Age:  "23",
+				Age:  23,
 			},
 		},
 		{
@@ -68,17 +69,17 @@ func TestParser_Success(t *testing.T) {
 				Name:         "Tom",
 				NameList:     []string{"x", "y", "z"},
 				NameListDash: []string{"x,y,z"},
-				Age:          "23",
+				Age:          23,
 			},
 		},
 		{
 			TestDesc: "CommaAndDashDelimitedStrings",
-			URL:      "https://example.com/some/path?names=x,y-z&age=2-3",
+			URL:      "https://example.com/some/path?names=x,y-z&age=23",
 			Data:     testData{},
 			OutputData: testData{
 				NameList:     []string{"x", "y-z"},
 				NameListDash: []string{"x,y", "z"},
-				Age:          "2-3",
+				Age:          23,
 			},
 		},
 	}
@@ -196,13 +197,13 @@ func TestParse_UnhandledFieldType(t *testing.T) {
 
 	req := &struct {
 		Name   string `queryparam:"name"`
-		Age    int    `queryparam:"age"`
+		Age    struct{}    `queryparam:"age"`
 		Gender string `queryparam:"gender"`
 	}{}
 
 	err = queryparam.Parse(u, req)
 	if !errors.Is(err, queryparam.ErrUnhandledFieldType) {
-		t.Errorf("unexpected error: %s", err.Error())
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 
@@ -220,7 +221,30 @@ func TestParse_EmptyTag(t *testing.T) {
 
 	err = queryparam.Parse(u, req)
 	if !errors.Is(err, queryparam.ErrInvalidTag) {
-		t.Errorf("unexpected error: %s", err.Error())
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestIntValueParser_InvalidInt(t *testing.T) {
+	t.Parallel()
+
+	u, err := url.Parse("https://example.com/some/path?age=asd")
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	req := &struct {
+		Age   int `queryparam:"age"`
+	}{}
+
+	err = queryparam.Parse(u, req)
+	var numErr *strconv.NumError
+	if !errors.As(err, &numErr) {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if numErr.Err != strconv.ErrSyntax {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 
@@ -251,7 +275,7 @@ func TestParse_ValueParserErrorReturned(t *testing.T) {
 
 	err = p.Parse(u, req)
 	if !errors.Is(err, tmpErr) {
-		t.Errorf("unexpected error: %s", err.Error())
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 
