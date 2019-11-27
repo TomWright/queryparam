@@ -19,6 +19,10 @@ var (
 	ErrInvalidTag = errors.New("invalid tag")
 )
 
+type FieldPresent bool
+
+var parameterPresentType = reflect.TypeOf(FieldPresent(false))
+
 // DefaultParser is a default parser.
 var DefaultParser = &Parser{
 	Tag:          "queryparam",
@@ -86,6 +90,11 @@ func (p *Parser) ParseField(field reflect.StructField, value reflect.Value, urlV
 	}
 	queryParameterValue := urlValues.Get(queryParameterName)
 	if queryParameterValue == "" {
+		return nil
+	}
+
+	if field.Type == parameterPresentType {
+		value.SetBool(true)
 		return nil
 	}
 

@@ -134,6 +134,43 @@ func TestParser_Parse(t *testing.T) {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
+
+	t.Run("FieldPresent", func(t *testing.T) {
+		t.Parallel()
+
+		p := &queryparam.Parser{
+			Tag:          "queryparam",
+			DelimiterTag: "queryparamdelim",
+			Delimiter:    ",",
+			ValueParsers: map[reflect.Type]queryparam.ValueParser{},
+		}
+
+		urlValues := url.Values{}
+		urlValues.Set("first-name", "Tom")
+		urlValues.Set("last-name", "")
+		urlValues.Set("age", "26")
+
+		type testData struct {
+			FirstName queryparam.FieldPresent `queryparam:"first-name"`
+			LastName  queryparam.FieldPresent `queryparam:"last-name"`
+			Age       queryparam.FieldPresent `queryparam:"age"`
+		}
+		var res testData
+
+		if err := p.Parse(urlValues, &res); err != nil {
+			t.Errorf("unexpected error: %v", err)
+			return
+		}
+
+		exp := testData{
+			FirstName: true,
+			LastName:  false,
+			Age:       true,
+		}
+		if !reflect.DeepEqual(exp, res) {
+			t.Errorf("expected result:\n%v\ngot result:\n%v\n", exp, res)
+		}
+	})
 }
 
 func TestParse_FieldWithNoTagIsNotUsed(t *testing.T) {
