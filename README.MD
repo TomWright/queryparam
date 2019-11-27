@@ -19,7 +19,7 @@ go get -u github.com/tomwright/queryparam
 ```
 type GetUsersRequest struct {
 	Name   string `queryparam:"name"`
-	Age    string `queryparam:"age"`
+	Age    int `queryparam:"age"`
 	Gender string `queryparam:"gender"`
 }
 
@@ -36,7 +36,7 @@ if err != nil {
 }
 
 fmt.Println(req.Name) // "Tom"
-fmt.Println(req.Age) // "23"
+fmt.Println(req.Age) // 23
 fmt.Println(req.Gender) // ""
 ```
 
@@ -72,7 +72,7 @@ var r *http.Request
 
 type GetUsersRequest struct {
 	Name   string `queryparam:"name"`
-	Age    string `queryparam:"age"`
+	Age    int `queryparam:"age"`
 	Gender string `queryparam:"gender"`
 }
 
