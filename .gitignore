@@ -2,3 +2,4 @@
 /Gopkg.lock
 /coverage.txt
 .idea/
+go.sum

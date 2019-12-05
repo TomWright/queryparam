@@ -3,7 +3,7 @@ package queryparam_test
 import (
 	"errors"
 	"fmt"
-	"github.com/tomwright/queryparam/v3"
+	"github.com/tomwright/queryparam/v4"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -52,7 +52,7 @@ func TestParser_Parse(t *testing.T) {
 			DelimiterTag: "queryparamdelim",
 			Delimiter:    ",",
 			ValueParsers: map[reflect.Type]queryparam.ValueParser{
-				reflect.TypeOf(""): func(value string, delimiter string, target reflect.Value) error {
+				reflect.TypeOf(""): func(value string, delimiter string) (reflect.Value, error) {
 					calledCount++
 					if value != "Tom" {
 						t.Errorf("unexpected value: %s", value)
@@ -60,7 +60,7 @@ func TestParser_Parse(t *testing.T) {
 					if delimiter != "," {
 						t.Errorf("unexpected delimiter: %s", delimiter)
 					}
-					return nil
+					return reflect.ValueOf(""), nil
 				},
 			},
 		}
@@ -88,7 +88,7 @@ func TestParser_Parse(t *testing.T) {
 			DelimiterTag: "queryparamdelim",
 			Delimiter:    ",",
 			ValueParsers: map[reflect.Type]queryparam.ValueParser{
-				reflect.TypeOf(""): func(value string, delimiter string, target reflect.Value) error {
+				reflect.TypeOf(""): func(value string, delimiter string) (reflect.Value, error) {
 					calledCount++
 					if value != "Tom" {
 						t.Errorf("unexpected value: %s", value)
@@ -96,7 +96,7 @@ func TestParser_Parse(t *testing.T) {
 					if delimiter != ":" {
 						t.Errorf("unexpected delimiter: %s", delimiter)
 					}
-					return nil
+					return reflect.ValueOf(""), nil
 				},
 			},
 		}
@@ -115,34 +115,14 @@ func TestParser_Parse(t *testing.T) {
 		}
 	})
 
-	t.Run("SkipBlankQueryParameters", func(t *testing.T) {
+	t.Run("Present", func(t *testing.T) {
 		t.Parallel()
 
 		p := &queryparam.Parser{
 			Tag:          "queryparam",
 			DelimiterTag: "queryparamdelim",
 			Delimiter:    ",",
-			ValueParsers: map[reflect.Type]queryparam.ValueParser{},
-		}
-
-		urlValues := url.Values{}
-		urlValues.Set("name", "")
-
-		if err := p.Parse(urlValues, &struct {
-			Name string `queryparam:"name"`
-		}{}); err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-	})
-
-	t.Run("FieldPresent", func(t *testing.T) {
-		t.Parallel()
-
-		p := &queryparam.Parser{
-			Tag:          "queryparam",
-			DelimiterTag: "queryparamdelim",
-			Delimiter:    ",",
-			ValueParsers: map[reflect.Type]queryparam.ValueParser{},
+			ValueParsers: queryparam.DefaultValueParsers(),
 		}
 
 		urlValues := url.Values{}
@@ -151,9 +131,9 @@ func TestParser_Parse(t *testing.T) {
 		urlValues.Set("age", "26")
 
 		type testData struct {
-			FirstName queryparam.FieldPresent `queryparam:"first-name"`
-			LastName  queryparam.FieldPresent `queryparam:"last-name"`
-			Age       queryparam.FieldPresent `queryparam:"age"`
+			FirstName queryparam.Present `queryparam:"first-name"`
+			LastName  queryparam.Present `queryparam:"last-name"`
+			Age       queryparam.Present `queryparam:"age"`
 		}
 		var res testData
 
@@ -247,8 +227,8 @@ func TestParse_ValueParserErrorReturned(t *testing.T) {
 		DelimiterTag: "queryparamdelim",
 		Delimiter:    ",",
 		ValueParsers: map[reflect.Type]queryparam.ValueParser{
-			reflect.TypeOf(""): func(value string, delimiter string, target reflect.Value) error {
-				return tmpErr
+			reflect.TypeOf(""): func(value string, delimiter string) (reflect.Value, error) {
+				return reflect.ValueOf(""), tmpErr
 			},
 		},
 	}
@@ -279,4 +259,18 @@ func BenchmarkParse(b *testing.B) {
 	}
 	b.StopTimer()
 	b.ReportAllocs()
+}
+
+func TestErrInvalidParameterValue_Unwrap(t *testing.T) {
+	e := &queryparam.ErrInvalidParameterValue{
+		Err:       errors.New("something bad"),
+		Parameter: "Name",
+		Field:     "name",
+		Value:     "asd",
+		Type:      reflect.TypeOf(""),
+	}
+	exp := "invalid parameter value for field name (string) from parameter Name (asd): something bad"
+	if got := e.Error(); exp != got {
+		t.Errorf("expected `%s`, got `%s`", exp, got)
+	}
 }

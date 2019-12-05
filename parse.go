@@ -19,23 +19,48 @@ var (
 	ErrInvalidTag = errors.New("invalid tag")
 )
 
-type FieldPresent bool
+// ErrInvalidParameterValue is an error adds extra context to a parser error.
+type ErrInvalidParameterValue struct {
+	Err       error
+	Parameter string
+	Field     string
+	Value     string
+	Type      reflect.Type
+}
 
-var parameterPresentType = reflect.TypeOf(FieldPresent(false))
+// Error returns the full error message.
+func (e *ErrInvalidParameterValue) Error() string {
+	return fmt.Sprintf("invalid parameter value for field %s (%s) from parameter %s (%s): %s", e.Field, e.Type, e.Parameter, e.Value, e.Err.Error())
+}
+
+// Unwrap returns the wrapped error.
+func (e *ErrInvalidParameterValue) Unwrap() error {
+	return e.Err
+}
+
+// Present allows you to determine whether or not a query parameter was present in a request.
+type Present bool
 
 // DefaultParser is a default parser.
 var DefaultParser = &Parser{
 	Tag:          "queryparam",
 	DelimiterTag: "queryparamdelim",
 	Delimiter:    ",",
-	ValueParsers: map[reflect.Type]ValueParser{
-		reflect.TypeOf(""):          StringValueParser,
-		reflect.TypeOf([]string{}):  StringSliceValueParser,
-		reflect.TypeOf(0):           IntValueParser,
-		reflect.TypeOf(int32(0)):    IntValueParser,
-		reflect.TypeOf(int64(0)):    IntValueParser,
-		reflect.TypeOf(time.Time{}): TimeValueParser,
-	},
+	ValueParsers: DefaultValueParsers(),
+}
+
+// DefaultValueParsers returns a set of default value parsers.
+func DefaultValueParsers() map[reflect.Type]ValueParser {
+	return map[reflect.Type]ValueParser{
+		reflect.TypeOf(""):             StringValueParser,
+		reflect.TypeOf([]string{}):     StringSliceValueParser,
+		reflect.TypeOf(0):              IntValueParser,
+		reflect.TypeOf(int32(0)):       Int32ValueParser,
+		reflect.TypeOf(int64(0)):       Int64ValueParser,
+		reflect.TypeOf(time.Time{}):    TimeValueParser,
+		reflect.TypeOf(false):          BoolValueParser,
+		reflect.TypeOf(Present(false)): PresentValueParser,
+	}
 }
 
 // Parser is used to parse a URL.
@@ -46,8 +71,8 @@ type Parser struct {
 	ValueParsers map[reflect.Type]ValueParser
 }
 
-// ValueParser is a func used to parse a value and set it on a target.
-type ValueParser func(value string, delimiter string, target reflect.Value) error
+// ValueParser is a func used to parse a value.
+type ValueParser func(value string, delimiter string) (reflect.Value, error)
 
 // FieldDelimiter returns a delimiter to be used with the given field.
 func (p *Parser) FieldDelimiter(field reflect.StructField) string {
@@ -86,26 +111,27 @@ func (p *Parser) ParseField(field reflect.StructField, value reflect.Value, urlV
 		return nil
 	}
 	if queryParameterName == "" {
-		return fmt.Errorf("%w: missing value", ErrInvalidTag)
+		return fmt.Errorf("missing tag value for field: %s: %w", field.Name, ErrInvalidTag)
 	}
 	queryParameterValue := urlValues.Get(queryParameterName)
-	if queryParameterValue == "" {
-		return nil
-	}
-
-	if field.Type == parameterPresentType {
-		value.SetBool(true)
-		return nil
-	}
 
 	valueParser, ok := p.ValueParsers[field.Type]
 	if !ok {
 		return fmt.Errorf("%w: %s: %v", ErrUnhandledFieldType, field.Name, field.Type.String())
 	}
 
-	if err := valueParser(queryParameterValue, p.FieldDelimiter(field), value); err != nil {
+	parsedValue, err := valueParser(queryParameterValue, p.FieldDelimiter(field))
+	if err != nil {
+		err = &ErrInvalidParameterValue{
+			Err:       err,
+			Value:     queryParameterValue,
+			Parameter: queryParameterName,
+			Type:      field.Type,
+			Field:     field.Name,
+		}
 		return err
 	}
+	value.Set(parsedValue)
 
 	return nil
 }
