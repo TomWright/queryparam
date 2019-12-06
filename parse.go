@@ -43,9 +43,14 @@ type Present bool
 
 // DefaultParser is a default parser.
 var DefaultParser = &Parser{
-	Tag:          "queryparam",
+	// Tag is the name of the struct tag where the query parameter name is set.
+	Tag: "queryparam",
+	// Delimiter is the name of the struct tag where a string delimiter override is set.
 	DelimiterTag: "queryparamdelim",
-	Delimiter:    ",",
+	// Delimiter is the default string delimiter.
+	Delimiter: ",",
+	// ValueParsers is a map[reflect.Type]ValueParser that defines how we parse query
+	// parameters based on the destination variable type.
 	ValueParsers: DefaultValueParsers(),
 }
 
@@ -131,7 +136,14 @@ func (p *Parser) ParseField(field reflect.StructField, value reflect.Value, urlV
 		}
 		return err
 	}
-	value.Set(parsedValue)
+
+	// handle edge case value types
+	switch field.Type {
+	case reflect.TypeOf(int32(0)):
+		value.SetInt(parsedValue.Int())
+	default:
+		value.Set(parsedValue)
+	}
 
 	return nil
 }

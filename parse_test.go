@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/tomwright/queryparam/v4"
-	"net/http"
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 )
 
 var urlValues = url.Values{}
@@ -18,139 +18,71 @@ var urlValuesNameAge = url.Values{
 
 // ExampleParse creates a dummy http request and parses the data into a struct
 func ExampleParse() {
-	var err error
-	var request = &http.Request{}
-	request.URL, err = url.Parse("https://example.com/some/path?name=Tom&age=23")
-	if err != nil {
-		panic(err)
-	}
+	urlValues := url.Values{}
+	urlValues.Set("name", "Tom")
+	urlValues.Set("names", "Tom,Jim,Frank")      // list of names separated by ,
+	urlValues.Set("dash-names", "Tom-Jim-Frank") // list of names separated by -
+	urlValues.Set("age", "123")
+	urlValues.Set("age32", "123")
+	urlValues.Set("age64", "123")
+	urlValues.Set("created-at", "2019-02-05T13:32:02Z")
+	urlValues.Set("bool-false", "false")
+	urlValues.Set("bool-true", "true")
+	urlValues.Set("bool-empty", "")    // param set but no value means
+	urlValues.Set("present-empty", "") // param set but no value
+	urlValues.Set("present", "this is here")
 
 	requestData := struct {
-		Name string `queryparam:"name"`
-		Age  int    `queryparam:"age"`
+		Name         string             `queryparam:"name"`
+		Names        []string           `queryparam:"names"`
+		DashNames    []string           `queryparam:"dash-names" queryparamdelim:"-"`
+		Age          int                `queryparam:"age"`
+		Age32        int32              `queryparam:"age32"`
+		Age64        int64              `queryparam:"age64"`
+		CreatedAt    time.Time          `queryparam:"created-at"`
+		UpdatedAt    time.Time          `queryparam:"updated-at"`
+		BoolFalse    bool               `queryparam:"bool-false"`
+		BoolTrue     bool               `queryparam:"bool-true"`
+		BoolEmpty    bool               `queryparam:"bool-empty"`
+		PresentEmpty queryparam.Present `queryparam:"present-empty"`
+		Present      queryparam.Present `queryparam:"present"`
+		NotPresent   queryparam.Present `queryparam:"not-present"`
 	}{}
 
-	err = queryparam.Parse(request.URL.Query(), &requestData)
-	if err != nil {
+	if err := queryparam.Parse(urlValues, &requestData); err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("%s is %d", requestData.Name, requestData.Age)
+	fmt.Printf("name: %s\n", requestData.Name)
+	fmt.Printf("names: %v\n", requestData.Names)
+	fmt.Printf("dash names: %v\n", requestData.DashNames)
+	fmt.Printf("age: %d\n", requestData.Age)
+	fmt.Printf("age32: %d\n", requestData.Age32)
+	fmt.Printf("age64: %d\n", requestData.Age64)
+	fmt.Printf("created at: %s\n", requestData.CreatedAt.Format(time.RFC3339))
+	fmt.Printf("updated at: %s\n", requestData.UpdatedAt.Format(time.RFC3339))
+	fmt.Printf("bool false: %v\n", requestData.BoolFalse)
+	fmt.Printf("bool true: %v\n", requestData.BoolTrue)
+	fmt.Printf("bool empty: %v\n", requestData.BoolEmpty)
+	fmt.Printf("present empty: %v\n", requestData.PresentEmpty)
+	fmt.Printf("present: %v\n", requestData.Present)
+	fmt.Printf("not present: %v\n", requestData.NotPresent)
 
-	// Output: Tom is 23
-}
-
-func TestParser_Parse(t *testing.T) {
-	t.Parallel()
-
-	t.Run("ValueParser", func(t *testing.T) {
-		t.Parallel()
-
-		calledCount := 0
-		p := &queryparam.Parser{
-			Tag:          "queryparam",
-			DelimiterTag: "queryparamdelim",
-			Delimiter:    ",",
-			ValueParsers: map[reflect.Type]queryparam.ValueParser{
-				reflect.TypeOf(""): func(value string, delimiter string) (reflect.Value, error) {
-					calledCount++
-					if value != "Tom" {
-						t.Errorf("unexpected value: %s", value)
-					}
-					if delimiter != "," {
-						t.Errorf("unexpected delimiter: %s", delimiter)
-					}
-					return reflect.ValueOf(""), nil
-				},
-			},
-		}
-
-		urlValues := url.Values{}
-		urlValues.Set("name", "Tom")
-
-		if err := p.Parse(urlValues, &struct {
-			Name string `queryparam:"name"`
-		}{}); err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-
-		if calledCount != 1 {
-			t.Errorf("unexpected called count: %d", calledCount)
-		}
-	})
-
-	t.Run("ValueParserCustomDelimiter", func(t *testing.T) {
-		t.Parallel()
-
-		calledCount := 0
-		p := &queryparam.Parser{
-			Tag:          "queryparam",
-			DelimiterTag: "queryparamdelim",
-			Delimiter:    ",",
-			ValueParsers: map[reflect.Type]queryparam.ValueParser{
-				reflect.TypeOf(""): func(value string, delimiter string) (reflect.Value, error) {
-					calledCount++
-					if value != "Tom" {
-						t.Errorf("unexpected value: %s", value)
-					}
-					if delimiter != ":" {
-						t.Errorf("unexpected delimiter: %s", delimiter)
-					}
-					return reflect.ValueOf(""), nil
-				},
-			},
-		}
-
-		urlValues := url.Values{}
-		urlValues.Set("name", "Tom")
-
-		if err := p.Parse(urlValues, &struct {
-			Name string `queryparam:"name" queryparamdelim:":"`
-		}{}); err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-
-		if calledCount != 1 {
-			t.Errorf("unexpected called count: %d", calledCount)
-		}
-	})
-
-	t.Run("Present", func(t *testing.T) {
-		t.Parallel()
-
-		p := &queryparam.Parser{
-			Tag:          "queryparam",
-			DelimiterTag: "queryparamdelim",
-			Delimiter:    ",",
-			ValueParsers: queryparam.DefaultValueParsers(),
-		}
-
-		urlValues := url.Values{}
-		urlValues.Set("first-name", "Tom")
-		urlValues.Set("last-name", "")
-		urlValues.Set("age", "26")
-
-		type testData struct {
-			FirstName queryparam.Present `queryparam:"first-name"`
-			LastName  queryparam.Present `queryparam:"last-name"`
-			Age       queryparam.Present `queryparam:"age"`
-		}
-		var res testData
-
-		if err := p.Parse(urlValues, &res); err != nil {
-			t.Errorf("unexpected error: %v", err)
-			return
-		}
-
-		exp := testData{
-			FirstName: true,
-			LastName:  false,
-			Age:       true,
-		}
-		if !reflect.DeepEqual(exp, res) {
-			t.Errorf("expected result:\n%v\ngot result:\n%v\n", exp, res)
-		}
-	})
+	// Output:
+	// name: Tom
+	// names: [Tom Jim Frank]
+	// dash names: [Tom Jim Frank]
+	// age: 123
+	// age32: 123
+	// age64: 123
+	// created at: 2019-02-05T13:32:02Z
+	// updated at: 0001-01-01T00:00:00Z
+	// bool false: false
+	// bool true: true
+	// bool empty: false
+	// present empty: false
+	// present: true
+	// not present: false
 }
 
 func TestParse_FieldWithNoTagIsNotUsed(t *testing.T) {
