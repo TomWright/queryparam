@@ -62,6 +62,8 @@ func DefaultValueParsers() map[reflect.Type]ValueParser {
 		reflect.TypeOf(0):              IntValueParser,
 		reflect.TypeOf(int32(0)):       Int32ValueParser,
 		reflect.TypeOf(int64(0)):       Int64ValueParser,
+		reflect.TypeOf(float32(0)):     Float32ValueParser,
+		reflect.TypeOf(float64(0)):     Float64ValueParser,
 		reflect.TypeOf(time.Time{}):    TimeValueParser,
 		reflect.TypeOf(false):          BoolValueParser,
 		reflect.TypeOf(Present(false)): PresentValueParser,
@@ -141,6 +143,8 @@ func (p *Parser) ParseField(field reflect.StructField, value reflect.Value, urlV
 	switch field.Type {
 	case reflect.TypeOf(int32(0)):
 		value.SetInt(parsedValue.Int())
+	case reflect.TypeOf(float32(0)):
+		value.SetFloat(parsedValue.Float())
 	default:
 		value.Set(parsedValue)
 	}

@@ -252,3 +252,69 @@ func TestBoolValueParser(t *testing.T) {
 	t.Run("True", checkBoolFn([]string{"true", "TRUE", "1", "yes", "YES", "y", "Y"}, true))
 	t.Run("False", checkBoolFn([]string{"", "false", "FALSE", "0", "no", "NO", "n", "N"}, false))
 }
+
+func TestFloat32ValueParser(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
+		res, err := queryparam.Float32ValueParser("", "")
+		if err != nil {
+			t.Errorf("unexpected error: %s", err.Error())
+			return
+		}
+		if exp, got := float32(0), float32(res.Float()); exp != got {
+			t.Errorf("expected res `%v`, got `%v`", exp, got)
+		}
+	})
+	t.Run("Valid", func(t *testing.T) {
+		res, err := queryparam.Float32ValueParser("21323", "")
+		if err != nil {
+			t.Errorf("unexpected error: %s", err.Error())
+			return
+		}
+		if exp, got := float32(21323), float32(res.Float()); exp != got {
+			t.Errorf("expected res `%v`, got `%v`", exp, got)
+		}
+		t.Run("Invalid", func(t *testing.T) {
+			res, err := queryparam.Float32ValueParser("asd", "")
+			var numErr *strconv.NumError
+			if err == nil || !errors.As(err, &numErr) || !errors.Is(numErr.Err, strconv.ErrSyntax) {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if exp, got := float32(0), float32(res.Float()); exp != got {
+				t.Errorf("expected res `%v`, got `%v`", exp, got)
+			}
+		})
+	})
+}
+
+func TestFloat64ValueParser(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
+		res, err := queryparam.Float64ValueParser("", "")
+		if err != nil {
+			t.Errorf("unexpected error: %s", err.Error())
+			return
+		}
+		if exp, got := float64(0), float64(res.Float()); exp != got {
+			t.Errorf("expected res `%v`, got `%v`", exp, got)
+		}
+	})
+	t.Run("Valid", func(t *testing.T) {
+		res, err := queryparam.Float64ValueParser("21643", "")
+		if err != nil {
+			t.Errorf("unexpected error: %s", err.Error())
+			return
+		}
+		if exp, got := float64(21643), float64(res.Float()); exp != got {
+			t.Errorf("expected res `%v`, got `%v`", exp, got)
+		}
+	})
+	t.Run("Invalid", func(t *testing.T) {
+		res, err := queryparam.Float64ValueParser("asd", "")
+		var numErr *strconv.NumError
+		if err == nil || !errors.As(err, &numErr) || !errors.Is(numErr.Err, strconv.ErrSyntax) {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if exp, got := float64(0), float64(res.Float()); exp != got {
+			t.Errorf("expected res `%v`, got `%v`", exp, got)
+		}
+	})
+}

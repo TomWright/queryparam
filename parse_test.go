@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/tomwright/queryparam/v4"
+	"math"
 	"net/url"
 	"reflect"
 	"testing"
@@ -25,6 +26,8 @@ func ExampleParse() {
 	urlValues.Set("age", "123")
 	urlValues.Set("age32", "123")
 	urlValues.Set("age64", "123")
+	urlValues.Set("float32", "123.45")
+	urlValues.Set("float64", "123.45")
 	urlValues.Set("created-at", "2019-02-05T13:32:02Z")
 	urlValues.Set("bool-false", "false")
 	urlValues.Set("bool-true", "true")
@@ -39,6 +42,8 @@ func ExampleParse() {
 		Age          int                `queryparam:"age"`
 		Age32        int32              `queryparam:"age32"`
 		Age64        int64              `queryparam:"age64"`
+		Float32      float32            `queryparam:"float32"`
+		Float64      float64            `queryparam:"float64"`
 		CreatedAt    time.Time          `queryparam:"created-at"`
 		UpdatedAt    time.Time          `queryparam:"updated-at"`
 		BoolFalse    bool               `queryparam:"bool-false"`
@@ -59,6 +64,8 @@ func ExampleParse() {
 	fmt.Printf("age: %d\n", requestData.Age)
 	fmt.Printf("age32: %d\n", requestData.Age32)
 	fmt.Printf("age64: %d\n", requestData.Age64)
+	fmt.Printf("float32: %f\n", math.Round(float64(requestData.Float32))) // rounded to avoid floating point precision issues
+	fmt.Printf("float64: %f\n", math.Round(requestData.Float64))          // rounded to avoid floating point precision issues
 	fmt.Printf("created at: %s\n", requestData.CreatedAt.Format(time.RFC3339))
 	fmt.Printf("updated at: %s\n", requestData.UpdatedAt.Format(time.RFC3339))
 	fmt.Printf("bool false: %v\n", requestData.BoolFalse)
@@ -75,6 +82,8 @@ func ExampleParse() {
 	// age: 123
 	// age32: 123
 	// age64: 123
+	// float32: 123.000000
+	// float64: 123.000000
 	// created at: 2019-02-05T13:32:02Z
 	// updated at: 0001-01-01T00:00:00Z
 	// bool false: false

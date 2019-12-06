@@ -60,15 +60,15 @@ func Int64ValueParser(value string, _ string) (reflect.Value, error) {
 func Int32ValueParser(value string, _ string) (reflect.Value, error) {
 	if value == "" {
 		// ignore blank values.
-		return reflect.ValueOf(int32(0)), nil
+		return reflect.ValueOf(0), nil
 	}
 
-	i32, err := strconv.ParseInt(value, 10, 32)
+	i64, err := strconv.ParseInt(value, 10, 32)
 	if err != nil {
-		return reflect.ValueOf(int32(0)), err
+		return reflect.ValueOf(0), err
 	}
 
-	return reflect.ValueOf(i32), nil
+	return reflect.ValueOf(i64), nil
 }
 
 // TimeValueParser parses a string into an int64.
@@ -101,4 +101,34 @@ func BoolValueParser(value string, _ string) (reflect.Value, error) {
 // This parser will only be executed if the parameter is present.
 func PresentValueParser(value string, _ string) (reflect.Value, error) {
 	return reflect.ValueOf(Present(value != "")), nil
+}
+
+// Float64ValueParser parses a string to a float64.
+func Float64ValueParser(value string, _ string) (reflect.Value, error) {
+	if value == "" {
+		// ignore blank values.
+		return reflect.ValueOf(float64(0)), nil
+	}
+
+	i64, err := strconv.ParseFloat(value, 10)
+	if err != nil {
+		return reflect.ValueOf(float64(0)), err
+	}
+
+	return reflect.ValueOf(i64), nil
+}
+
+// Float32ValueParser parses a string to a float32.
+func Float32ValueParser(value string, _ string) (reflect.Value, error) {
+	if value == "" {
+		// ignore blank values.
+		return reflect.ValueOf(float32(0)), nil
+	}
+
+	f64, err := strconv.ParseFloat(value, 10)
+	if err != nil {
+		return reflect.ValueOf(float32(0)), err
+	}
+
+	return reflect.ValueOf(f64), nil
 }
