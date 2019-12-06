@@ -15,6 +15,8 @@ go get -u github.com/tomwright/queryparam
 
 ## Examples
 
+For more complete examples see [godoc examples](https://godoc.org/github.com/TomWright/queryparam#example-Parse)
+
 ### Parsing a simple URL
 ```
 type GetUsersRequest struct {
