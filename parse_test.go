@@ -132,7 +132,7 @@ func TestParse_NonPointerTarget(t *testing.T) {
 	}
 }
 
-func TestParse_UnhandledFieldType(t *testing.T) {
+func TestParse_ParserUnhandledFieldType(t *testing.T) {
 	t.Parallel()
 
 	req := &struct {
@@ -141,6 +141,54 @@ func TestParse_UnhandledFieldType(t *testing.T) {
 
 	err := queryparam.Parse(urlValuesNameAge, req)
 	if !errors.Is(err, queryparam.ErrUnhandledFieldType) {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestParse_SetterUnhandledFieldType(t *testing.T) {
+	t.Parallel()
+
+	req := &struct {
+		Age int `queryparam:"age"`
+	}{}
+
+	p := &queryparam.Parser{
+		Tag:          "queryparam",
+		DelimiterTag: "queryparamdelim",
+		Delimiter:    ",",
+		ValueParsers: queryparam.DefaultValueParsers(),
+		ValueSetters: map[reflect.Type]queryparam.ValueSetter{},
+	}
+
+	err := p.Parse(urlValuesNameAge, req)
+	if !errors.Is(err, queryparam.ErrUnhandledFieldType) {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestParse_ValueParserErrorReturned(t *testing.T) {
+	t.Parallel()
+
+	tmpErr := errors.New("something bad happened")
+
+	p := &queryparam.Parser{
+		Tag:          "queryparam",
+		DelimiterTag: "queryparamdelim",
+		Delimiter:    ",",
+		ValueParsers: queryparam.DefaultValueParsers(),
+		ValueSetters: map[reflect.Type]queryparam.ValueSetter{
+			reflect.TypeOf(""): func(value reflect.Value, target reflect.Value) error {
+				return tmpErr
+			},
+		},
+	}
+
+	req := &struct {
+		Name string `queryparam:"name"`
+	}{}
+
+	err := p.Parse(urlValuesNameAge, req)
+	if !errors.Is(err, tmpErr) {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
@@ -158,7 +206,7 @@ func TestParse_EmptyTag(t *testing.T) {
 	}
 }
 
-func TestParse_ValueParserErrorReturned(t *testing.T) {
+func TestParse_ValueSetterErrorReturned(t *testing.T) {
 	t.Parallel()
 
 	tmpErr := errors.New("something bad happened")
@@ -203,8 +251,9 @@ func BenchmarkParse(b *testing.B) {
 }
 
 func TestErrInvalidParameterValue_Unwrap(t *testing.T) {
+	tmpErr := errors.New("something bad")
 	e := &queryparam.ErrInvalidParameterValue{
-		Err:       errors.New("something bad"),
+		Err:       tmpErr,
 		Parameter: "Name",
 		Field:     "name",
 		Value:     "asd",
@@ -213,5 +262,27 @@ func TestErrInvalidParameterValue_Unwrap(t *testing.T) {
 	exp := "invalid parameter value for field name (string) from parameter Name (asd): something bad"
 	if got := e.Error(); exp != got {
 		t.Errorf("expected `%s`, got `%s`", exp, got)
+	}
+	if !errors.Is(e, tmpErr) {
+		t.Error("expected is to return true")
+	}
+}
+
+func TestCannotSetValue_Unwrap(t *testing.T) {
+	tmpErr := errors.New("something bad")
+	e := &queryparam.ErrCannotSetValue{
+		Err:         tmpErr,
+		Parameter:   "Name",
+		Field:       "name",
+		Value:       "asd",
+		Type:        reflect.TypeOf(""),
+		ParsedValue: reflect.ValueOf("asd"),
+	}
+	exp := "cannot set value for field name (string) from parameter Name (asd - asd): something bad"
+	if got := e.Error(); exp != got {
+		t.Errorf("expected `%s`, got `%s`", exp, got)
+	}
+	if !errors.Is(e, tmpErr) {
+		t.Error("expected is to return true")
 	}
 }

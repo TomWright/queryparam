@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
-	"time"
 )
 
 var (
@@ -38,48 +37,59 @@ func (e *ErrInvalidParameterValue) Unwrap() error {
 	return e.Err
 }
 
+// ErrCannotSetValue is an error adds extra context to a setter error.
+type ErrCannotSetValue struct {
+	Err         error
+	Parameter   string
+	Field       string
+	Value       string
+	Type        reflect.Type
+	ParsedValue reflect.Value
+}
+
+// Error returns the full error message.
+func (e *ErrCannotSetValue) Error() string {
+	return fmt.Sprintf("cannot set value for field %s (%s) from parameter %s (%s - %v): %s", e.Field, e.Type, e.Parameter, e.Value, e.ParsedValue, e.Err.Error())
+}
+
+// Unwrap returns the wrapped error.
+func (e *ErrCannotSetValue) Unwrap() error {
+	return e.Err
+}
+
 // Present allows you to determine whether or not a query parameter was present in a request.
 type Present bool
 
 // DefaultParser is a default parser.
 var DefaultParser = &Parser{
-	// Tag is the name of the struct tag where the query parameter name is set.
-	Tag: "queryparam",
-	// Delimiter is the name of the struct tag where a string delimiter override is set.
+	Tag:          "queryparam",
 	DelimiterTag: "queryparamdelim",
-	// Delimiter is the default string delimiter.
-	Delimiter: ",",
-	// ValueParsers is a map[reflect.Type]ValueParser that defines how we parse query
-	// parameters based on the destination variable type.
+	Delimiter:    ",",
 	ValueParsers: DefaultValueParsers(),
-}
-
-// DefaultValueParsers returns a set of default value parsers.
-func DefaultValueParsers() map[reflect.Type]ValueParser {
-	return map[reflect.Type]ValueParser{
-		reflect.TypeOf(""):             StringValueParser,
-		reflect.TypeOf([]string{}):     StringSliceValueParser,
-		reflect.TypeOf(0):              IntValueParser,
-		reflect.TypeOf(int32(0)):       Int32ValueParser,
-		reflect.TypeOf(int64(0)):       Int64ValueParser,
-		reflect.TypeOf(float32(0)):     Float32ValueParser,
-		reflect.TypeOf(float64(0)):     Float64ValueParser,
-		reflect.TypeOf(time.Time{}):    TimeValueParser,
-		reflect.TypeOf(false):          BoolValueParser,
-		reflect.TypeOf(Present(false)): PresentValueParser,
-	}
+	ValueSetters: DefaultValueSetters(),
 }
 
 // Parser is used to parse a URL.
 type Parser struct {
-	Tag          string
+	// Tag is the name of the struct tag where the query parameter name is set.
+	Tag string
+	// Delimiter is the name of the struct tag where a string delimiter override is set.
 	DelimiterTag string
-	Delimiter    string
+	// Delimiter is the default string delimiter.
+	Delimiter string
+	// ValueParsers is a map[reflect.Type]ValueParser that defines how we parse query
+	// parameters based on the destination variable type.
 	ValueParsers map[reflect.Type]ValueParser
+	// ValueSetters is a map[reflect.Type]ValueSetter that defines how we set values
+	// onto target variables.
+	ValueSetters map[reflect.Type]ValueSetter
 }
 
 // ValueParser is a func used to parse a value.
 type ValueParser func(value string, delimiter string) (reflect.Value, error)
+
+// ValueSetter is a func used to set a value on a target variable.
+type ValueSetter func(value reflect.Value, target reflect.Value) error
 
 // FieldDelimiter returns a delimiter to be used with the given field.
 func (p *Parser) FieldDelimiter(field reflect.StructField) string {
@@ -129,24 +139,39 @@ func (p *Parser) ParseField(field reflect.StructField, value reflect.Value, urlV
 
 	parsedValue, err := valueParser(queryParameterValue, p.FieldDelimiter(field))
 	if err != nil {
-		err = &ErrInvalidParameterValue{
+		return &ErrInvalidParameterValue{
 			Err:       err,
 			Value:     queryParameterValue,
 			Parameter: queryParameterName,
 			Type:      field.Type,
 			Field:     field.Name,
 		}
-		return err
 	}
 
-	// handle edge case value types
-	switch field.Type {
-	case reflect.TypeOf(int32(0)):
-		value.SetInt(parsedValue.Int())
-	case reflect.TypeOf(float32(0)):
-		value.SetFloat(parsedValue.Float())
-	default:
-		value.Set(parsedValue)
+	valueSetter, ok := p.ValueSetters[field.Type]
+	if !ok {
+		valueSetter, ok = p.ValueSetters[GenericType]
+	}
+	if !ok {
+		return &ErrCannotSetValue{
+			Err:         ErrUnhandledFieldType,
+			Value:       queryParameterValue,
+			ParsedValue: parsedValue,
+			Parameter:   queryParameterName,
+			Type:        field.Type,
+			Field:       field.Name,
+		}
+	}
+
+	if err := valueSetter(parsedValue, value); err != nil {
+		return &ErrCannotSetValue{
+			Err:         err,
+			Value:       queryParameterValue,
+			ParsedValue: parsedValue,
+			Parameter:   queryParameterName,
+			Type:        field.Type,
+			Field:       field.Name,
+		}
 	}
 
 	return nil

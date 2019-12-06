@@ -11,6 +11,22 @@ import (
 // ErrInvalidBoolValue is returned when an unhandled string is parsed.
 var ErrInvalidBoolValue = errors.New("unknown bool value")
 
+// DefaultValueParsers returns a set of default value parsers.
+func DefaultValueParsers() map[reflect.Type]ValueParser {
+	return map[reflect.Type]ValueParser{
+		reflect.TypeOf(""):             StringValueParser,
+		reflect.TypeOf([]string{}):     StringSliceValueParser,
+		reflect.TypeOf(0):              IntValueParser,
+		reflect.TypeOf(int32(0)):       Int32ValueParser,
+		reflect.TypeOf(int64(0)):       Int64ValueParser,
+		reflect.TypeOf(float32(0)):     Float32ValueParser,
+		reflect.TypeOf(float64(0)):     Float64ValueParser,
+		reflect.TypeOf(time.Time{}):    TimeValueParser,
+		reflect.TypeOf(false):          BoolValueParser,
+		reflect.TypeOf(Present(false)): PresentValueParser,
+	}
+}
+
 // StringValueParser parses a string into a string.
 func StringValueParser(value string, _ string) (reflect.Value, error) {
 	return reflect.ValueOf(value), nil
