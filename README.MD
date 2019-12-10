@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/TomWright/queryparam)](https://goreportcard.com/report/github.com/TomWright/queryparam)
 [![Documentation](https://godoc.org/github.com/TomWright/queryparam?status.svg)](https://godoc.org/github.com/TomWright/queryparam)
 
-Stop accessing query strings and parsing repeatedly parsing them into your preferred values - `queryparam` can do that for you! 
+Stop accessing query strings and repeatedly parsing them into your preferred values - `queryparam` can do that for you! 
 
 ## Installation
 
