@@ -13,6 +13,10 @@ Stop accessing query strings and repeatedly parsing them into your preferred val
 go get -u github.com/tomwright/queryparam
 ```
 
+## Usage
+
+Please use the latest major version. This requires the `/v4` at the end of the import as per the go mod documentation.
+
 ```
 import github.com/tomwright/queryparam/v4
 ```
